@@ -1,5 +1,9 @@
 import ExpressApp from '../infrastructure/express/ExpressApp';
 
-const server = new ExpressApp([]);
+import SocketApp from '../infrastructure/socket/SocketApp';
 
-server.start([]);
+const httpServer = new ExpressApp([]);
+
+const socketServer = new SocketApp(httpServer);
+
+socketServer.start([]);
