@@ -19,7 +19,16 @@ module.exports = {
     'max-lines-per-function': ['error', { max: 20, skipBlankLines: true, skipComments: true }],
     'max-params': ['error', 4],
     'newline-before-return': ['error'],
-    'sort-imports': 'error',
+    'sort-imports': [
+      'error',
+      {
+        ignoreCase: true,
+        ignoreDeclarationSort: false,
+        ignoreMemberSort: false,
+        memberSyntaxSortOrder: ['none', 'all', 'multiple', 'single'],
+        allowSeparatedGroups: false,
+      },
+    ],
   },
   settings: {
     'import/resolver': {

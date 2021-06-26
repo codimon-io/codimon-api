@@ -1,20 +1,23 @@
 /* eslint-disable sort-imports */
 import debug from 'debug';
 import http from 'http';
-import { Server } from 'socket.io';
+import { Server, Socket } from 'socket.io';
 import config from '../config';
 import ExpressApp from '../express/ExpressApp';
+// import DomainEvent from '../../contexts/shared/domain/bus/DomainEvent';
+// import IDomainEventSubscriber from '../../contexts/shared/domain/bus/IDomainEventSubscriber';
+// import IEventBus from '../../contexts/shared/domain/bus/IEventBus';
 
 import pkg from '../../../package.json';
 
 const logger = debug('server:infrastructure:socket:SocketApp');
 
-class SocketApp {
+class SocketApp /* implements IEventBus */ {
   private expressApp: ExpressApp;
 
   private httpApp: http.Server;
 
-  private io: Server;
+  public io: Server;
 
   constructor(expressApp: ExpressApp) {
     this.expressApp = expressApp;
@@ -24,11 +27,46 @@ class SocketApp {
     this.io = new Server(this.httpApp);
   }
 
+  // eslint-disable-next-line max-lines-per-function
   private initIo(): void {
-    this.io.on('connection', (socket: any) => {
-      logger('a user connected', socket.id);
+    this.io.on('connection', (socket: Socket) => {
+      logger('An user is connected', socket.id);
+
+      socket.on('device:info', (data: any) => {
+        logger('New received data', data);
+      });
+    });
+
+    this.io.on('disconnect', (socket: Socket) => {
+      logger('An user is disconnected', socket.id);
+    });
+
+    this.io.of(/^\/devices\/[A-Za-z0-9._-]+$/).on('connect', (socket) => {
+      const newNamespace = socket.nsp;
+
+      logger('a device %s connected to the namespace %s', socket.id, newNamespace.name);
+
+      socket.on('device:info', (data: any) => {
+        logger('New received data', data);
+      });
+
+      socket.on('disconnect', () => {
+        logger('A device is disconnected', socket.id);
+      });
+
+      socket.emit('device:ready');
     });
   }
+
+  /*
+  async publish(events: DomainEvent[]): Promise<void> {
+    // this.bus.publish(events);
+  }
+
+  addSubscribers(subscribers: Array<IDomainEventSubscriber<DomainEvent>>) {
+    // this.bus.registerSubscribers(subscribers);
+  }
+  */
 
   public listen(): void {
     if (config.env !== 'test' && config.env !== 'test.local') {
