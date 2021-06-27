@@ -12,6 +12,18 @@ import pkg from '../../../package.json';
 
 const logger = debug('server:infrastructure:socket:SocketApp');
 
+interface ClientSocket extends Socket {
+  clientType?: string;
+}
+
+interface DeviceSocket extends ClientSocket {
+  deviceId?: string;
+}
+
+interface UserSocket extends ClientSocket {
+  userId?: string;
+}
+
 class SocketApp /* implements IEventBus */ {
   private expressApp: ExpressApp;
 
@@ -24,37 +36,69 @@ class SocketApp /* implements IEventBus */ {
 
     this.httpApp = http.createServer(expressApp.app);
 
-    this.io = new Server(this.httpApp);
+    this.io = new Server(this.httpApp, {
+      cors: {
+        origin: '*',
+        methods: ['GET', 'POST'],
+      },
+    });
   }
 
   // eslint-disable-next-line max-lines-per-function
   private initIo(): void {
-    this.io.on('connection', (socket: Socket) => {
-      logger('An user is connected', socket.id);
+    // eslint-disable-next-line max-lines-per-function
+    this.io.on('connection', (socket: Socket|DeviceSocket|UserSocket) => {
+      logger('New connection with ID', socket.id);
 
-      socket.on('device:info', (data: any) => {
-        logger('New received data', data);
-      });
-    });
-
-    this.io.on('disconnect', (socket: Socket) => {
-      logger('An user is disconnected', socket.id);
-    });
-
-    this.io.of(/^\/devices\/[A-Za-z0-9._-]+$/).on('connect', (socket) => {
-      const newNamespace = socket.nsp;
-
-      logger('a device %s connected to the namespace %s', socket.id, newNamespace.name);
-
-      socket.on('device:info', (data: any) => {
-        logger('New received data', data);
-      });
+      let isIdentified: boolean = false;
 
       socket.on('disconnect', () => {
-        logger('A device is disconnected', socket.id);
+        logger('The connections with ID', socket.id, 'is disconnected');
       });
 
-      socket.emit('device:ready');
+      socket.on('device:identify', (data: any) => {
+        if (data.clientType !== 'device') return;
+
+        if (isIdentified) return;
+
+        isIdentified = true;
+
+        const deviceSocket = socket as DeviceSocket;
+
+        deviceSocket.clientType = 'device';
+
+        deviceSocket.deviceId = data.deviceId;
+
+        deviceSocket.join(deviceSocket.deviceId!);
+
+        logger('The connections with ID', socket.id, ' is the device', deviceSocket.deviceId);
+      });
+
+      socket.on('user:identify', (data: any) => {
+        if (data.clientType !== 'user') return;
+
+        if (isIdentified) return;
+
+        isIdentified = true;
+
+        const userSocket = socket as UserSocket;
+
+        userSocket.clientType = 'user';
+
+        userSocket.userId = data.userId;
+
+        socket.join(data.deviceIds);
+
+        logger('The connections with ID', socket.id, ' is the user', userSocket.userId);
+      });
+
+      socket.on('user:remote-control', (data: any) => {
+        const userSocket = socket as UserSocket;
+
+        userSocket.to(data.deviceId).emit('user:remote-control', data.content);
+
+        logger('The user with ID', userSocket.userId, ' sent a remote control to the device', data.deviceId);
+      });
     });
   }
 
