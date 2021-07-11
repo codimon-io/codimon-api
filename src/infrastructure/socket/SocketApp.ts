@@ -4,34 +4,35 @@ import http from 'http';
 import { Server, Socket } from 'socket.io';
 import config from '../config';
 import ExpressApp from '../express/ExpressApp';
-// import DomainEvent from '../../contexts/shared/domain/bus/DomainEvent';
-// import IDomainEventSubscriber from '../../contexts/shared/domain/bus/IDomainEventSubscriber';
-// import IEventBus from '../../contexts/shared/domain/bus/IEventBus';
+import { IUserSocket, IDeviceSocket } from './IClientSocket';
+import userIdentify from './listeners/userIdentify';
+import deviceIdentify from './listeners/deviceIdentify';
+import deviceRemoteControl from './listeners/deviceRemoteControl';
+import deviceStartStreaming from './listeners/deviceStartStreaming';
+import deviceStopStreaming from './listeners/deviceStopStreaming';
+import deviceStreaming from './listeners/deviceStreaming';
+import Subjects from './Subjects';
 
 import pkg from '../../../package.json';
 
 const logger = debug('server:infrastructure:socket:SocketApp');
 
-interface ClientSocket extends Socket {
-  clientType?: string;
+interface IListener {
+  subject: Subjects|string;
+  // eslint-disable-next-line no-unused-vars
+  listen(socket: IDeviceSocket|IUserSocket|Socket, log: any): (data: any) => void;
 }
 
-interface DeviceSocket extends ClientSocket {
-  deviceId?: string;
-}
-
-interface UserSocket extends ClientSocket {
-  userId?: string;
-}
-
-class SocketApp /* implements IEventBus */ {
+class SocketApp {
   private expressApp: ExpressApp;
 
   private httpApp: http.Server;
 
+  private deviceListeners: IListener[]
+
   public io: Server;
 
-  constructor(expressApp: ExpressApp) {
+  constructor(expressApp: ExpressApp, deviceListeners: IListener[]) {
     this.expressApp = expressApp;
 
     this.httpApp = http.createServer(expressApp.app);
@@ -42,75 +43,34 @@ class SocketApp /* implements IEventBus */ {
         methods: ['GET', 'POST'],
       },
     });
+
+    this.deviceListeners = [
+      ...deviceListeners,
+      userIdentify,
+      deviceIdentify,
+      deviceRemoteControl,
+      deviceStartStreaming,
+      deviceStopStreaming,
+      deviceStreaming,
+    ];
   }
 
-  // eslint-disable-next-line max-lines-per-function
-  private initIo(): void {
-    // eslint-disable-next-line max-lines-per-function
-    this.io.on('connection', (socket: Socket|DeviceSocket|UserSocket) => {
+  private setListeners(): void {
+    this.io.on('connection', (socket: IDeviceSocket|IUserSocket|Socket) => {
       logger('New connection with ID', socket.id);
 
-      let isIdentified: boolean = false;
+      // eslint-disable-next-line no-param-reassign
+      (socket as IDeviceSocket|IUserSocket).isIdentified = false;
 
       socket.on('disconnect', () => {
         logger('The connections with ID', socket.id, 'is disconnected');
       });
 
-      socket.on('device:identify', (data: any) => {
-        if (data.clientType !== 'device') return;
-
-        if (isIdentified) return;
-
-        isIdentified = true;
-
-        const deviceSocket = socket as DeviceSocket;
-
-        deviceSocket.clientType = 'device';
-
-        deviceSocket.deviceId = data.deviceId;
-
-        deviceSocket.join(deviceSocket.deviceId!);
-
-        logger('The connections with ID', socket.id, ' is the device', deviceSocket.deviceId);
-      });
-
-      socket.on('user:identify', (data: any) => {
-        if (data.clientType !== 'user') return;
-
-        if (isIdentified) return;
-
-        isIdentified = true;
-
-        const userSocket = socket as UserSocket;
-
-        userSocket.clientType = 'user';
-
-        userSocket.userId = data.userId;
-
-        socket.join(data.deviceIds);
-
-        logger('The connections with ID', socket.id, ' is the user', userSocket.userId);
-      });
-
-      socket.on('user:remote-control', (data: any) => {
-        const userSocket = socket as UserSocket;
-
-        userSocket.to(data.deviceId).emit('user:remote-control', data.content);
-
-        logger('The user with ID', userSocket.userId, ' sent a remote control to the device', data.deviceId);
+      this.deviceListeners.forEach((event) => {
+        socket.on(event.subject, event.listen(socket, logger));
       });
     });
   }
-
-  /*
-  async publish(events: DomainEvent[]): Promise<void> {
-    // this.bus.publish(events);
-  }
-
-  addSubscribers(subscribers: Array<IDomainEventSubscriber<DomainEvent>>) {
-    // this.bus.registerSubscribers(subscribers);
-  }
-  */
 
   public listen(): void {
     if (config.env !== 'test' && config.env !== 'test.local') {
@@ -125,7 +85,7 @@ class SocketApp /* implements IEventBus */ {
   public async start(services: Promise<any>[]): Promise<void> {
     await this.expressApp.runServices(services);
 
-    this.initIo();
+    this.setListeners();
 
     this.listen();
   }
