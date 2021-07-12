@@ -4,57 +4,72 @@ import http from 'http';
 import { Server, Socket } from 'socket.io';
 import config from '../config';
 import ExpressApp from '../express/ExpressApp';
-// import DomainEvent from '../../contexts/shared/domain/bus/DomainEvent';
-// import IDomainEventSubscriber from '../../contexts/shared/domain/bus/IDomainEventSubscriber';
-// import IEventBus from '../../contexts/shared/domain/bus/IEventBus';
+import { IUserSocket, IDeviceSocket } from './IClientSocket';
+import userIdentify from './listeners/userIdentify';
+import deviceIdentify from './listeners/deviceIdentify';
+import deviceRemoteControl from './listeners/deviceRemoteControl';
+import deviceStartStreaming from './listeners/deviceStartStreaming';
+import deviceStopStreaming from './listeners/deviceStopStreaming';
+import deviceStreaming from './listeners/deviceStreaming';
+import Subjects from './Subjects';
 
 import pkg from '../../../package.json';
 
 const logger = debug('server:infrastructure:socket:SocketApp');
 
-class SocketApp /* implements IEventBus */ {
+
+interface IListener {
+  subject: Subjects|string;
+  // eslint-disable-next-line no-unused-vars
+  listen(socket: IDeviceSocket|IUserSocket|Socket, log: any): (data: any) => void;
+}
+
+class SocketApp {
   private expressApp: ExpressApp;
 
   private httpApp: http.Server;
 
+  private deviceListeners: IListener[]
+
   public io: Server;
 
-  constructor(expressApp: ExpressApp) {
+  constructor(expressApp: ExpressApp, deviceListeners: IListener[]) {
     this.expressApp = expressApp;
 
     this.httpApp = http.createServer(expressApp.app);
 
-    this.io = new Server(this.httpApp);
+    this.io = new Server(this.httpApp, {
+      cors: {
+        origin: '*',
+        methods: ['GET', 'POST'],
+      },
+    });
+
+    this.deviceListeners = [
+      ...deviceListeners,
+      userIdentify,
+      deviceIdentify,
+      deviceRemoteControl,
+      deviceStartStreaming,
+      deviceStopStreaming,
+      deviceStreaming,
+    ];
   }
 
-  // eslint-disable-next-line max-lines-per-function
-  private initIo(): void {
-    this.io.on('connection', (socket: Socket) => {
-      logger('An user is connected', socket.id);
+  private setListeners(): void {
+    this.io.on('connection', (socket: IDeviceSocket|IUserSocket|Socket) => {
+      logger('New connection with ID', socket.id);
 
-      socket.on('device:info', (data: any) => {
-        logger('New received data', data);
-      });
-    });
-
-    this.io.on('disconnect', (socket: Socket) => {
-      logger('An user is disconnected', socket.id);
-    });
-
-    this.io.of(/^\/devices\/[A-Za-z0-9._-]+$/).on('connect', (socket) => {
-      const newNamespace = socket.nsp;
-
-      logger('a device %s connected to the namespace %s', socket.id, newNamespace.name);
-
-      socket.on('device:info', (data: any) => {
-        logger('New received data', data);
-      });
+      // eslint-disable-next-line no-param-reassign
+      (socket as IDeviceSocket|IUserSocket).isIdentified = false;
 
       socket.on('disconnect', () => {
-        logger('A device is disconnected', socket.id);
+        logger('The connections with ID', socket.id, 'is disconnected');
       });
 
-      socket.emit('device:ready');
+      this.deviceListeners.forEach((event) => {
+        socket.on(event.subject, event.listen(socket, logger));
+      });
     });
   }
 
@@ -81,7 +96,7 @@ class SocketApp /* implements IEventBus */ {
   public async start(services: Promise<any>[]): Promise<void> {
     await this.expressApp.runServices(services);
 
-    this.initIo();
+    this.setListeners();
 
     this.listen();
   }
