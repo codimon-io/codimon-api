@@ -17,6 +17,7 @@ import pkg from '../../../package.json';
 
 const logger = debug('server:infrastructure:socket:SocketApp');
 
+
 interface IListener {
   subject: Subjects|string;
   // eslint-disable-next-line no-unused-vars
@@ -71,6 +72,16 @@ class SocketApp {
       });
     });
   }
+
+  /*
+  async publish(events: DomainEvent[]): Promise<void> {
+    // this.bus.publish(events);
+  }
+
+  addSubscribers(subscribers: Array<IDomainEventSubscriber<DomainEvent>>) {
+    // this.bus.registerSubscribers(subscribers);
+  }
+  */
 
   public listen(): void {
     if (config.env !== 'test' && config.env !== 'test.local') {
