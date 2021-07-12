@@ -1,8 +1,8 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable max-len */
 /* eslint-disable no-param-reassign */
+import Events from '../Events';
 import { IDeviceSocket } from '../IClientSocket';
-import Subjects from '../Subjects';
 
 interface IDeviceIdentifyData {
   clientType: string;
@@ -10,7 +10,7 @@ interface IDeviceIdentifyData {
 }
 
 const deviceIdentify = {
-  subject: Subjects.DeviceIdentify,
+  subject: Events.DeviceIdentify,
   listen: (socket: IDeviceSocket, log: (...msg: any[]) => void) => (data: IDeviceIdentifyData) => {
     if (data.clientType !== 'device') return;
 

@@ -1,6 +1,6 @@
 /* eslint-disable no-shadow */
 /* eslint-disable no-unused-vars */
-enum Subjects {
+enum Events {
   DeviceIdentify = 'device:identify',
   DeviceRemoteControl ='device:remote-control',
   DeviceStartStreaming = 'device:start-streaming',
@@ -9,4 +9,4 @@ enum Subjects {
   UserIdentify = 'user:identify'
 }
 
-export default Subjects;
+export default Events;

@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable no-param-reassign */
+import Events from '../Events';
 import { IUserSocket } from '../IClientSocket';
-import Subjects from '../Subjects';
 
 interface IUserIdentifyData {
   clientType: string;
@@ -10,7 +10,7 @@ interface IUserIdentifyData {
 }
 
 const userIdentify = {
-  subject: Subjects.UserIdentify,
+  subject: Events.UserIdentify,
   listen: (socket: IUserSocket, log: (...msg: any[]) => void) => (data: IUserIdentifyData) => {
     if (data.clientType !== 'user') return;
 

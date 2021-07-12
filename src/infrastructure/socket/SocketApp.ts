@@ -11,14 +11,14 @@ import deviceRemoteControl from './listeners/deviceRemoteControl';
 import deviceStartStreaming from './listeners/deviceStartStreaming';
 import deviceStopStreaming from './listeners/deviceStopStreaming';
 import deviceStreaming from './listeners/deviceStreaming';
-import Subjects from './Subjects';
+import Events from './Events';
 
 import pkg from '../../../package.json';
 
 const logger = debug('server:infrastructure:socket:SocketApp');
 
 interface IListener {
-  subject: Subjects|string;
+  subject: Events|string;
   // eslint-disable-next-line no-unused-vars
   listen(socket: IDeviceSocket|IUserSocket|Socket, log: any): (data: any) => void;
 }
