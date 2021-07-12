@@ -1,23 +1,23 @@
+import Events from '../Events';
 import { IDeviceSocket } from '../IClientSocket';
-import Subjects from '../Subjects';
 
 interface IDeviceStreamingDeviceData {
   userId: string;
-  videoBuffer: any;
+  imageBuffer: ArrayBuffer;
 }
 
 interface IDeviceStreamingUserData {
-  videoBuffer: any;
+  imageBuffer: ArrayBuffer;
 }
 
 const deviceStreaming = {
-  subject: Subjects.DeviceStreaming,
+  subject: Events.DeviceStreaming,
   listen: (socket: IDeviceSocket) => (data: IDeviceStreamingDeviceData) => {
     const deviceData: IDeviceStreamingUserData = {
-      videoBuffer: data.videoBuffer,
+      imageBuffer: data.imageBuffer,
     };
 
-    socket.to(data.userId).emit(Subjects.DeviceStreaming, deviceData);
+    socket.to(data.userId).emit(Events.DeviceStreaming, deviceData);
   },
 };
 

@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable max-len */
+import Events from '../Events';
 import { IUserSocket } from '../IClientSocket';
-import Subjects from '../Subjects';
 
 interface IDeviceStartStreamingUserData {
   deviceId: string;
@@ -12,13 +12,13 @@ interface IDeviceStartStreamingDeviceData {
 }
 
 const deviceStartStreaming = {
-  subject: Subjects.DeviceStartStreaming,
+  subject: Events.DeviceStartStreaming,
   listen: (socket: IUserSocket, log: (...msg: any[]) => void) => (data: IDeviceStartStreamingUserData) => {
     const deviceData: IDeviceStartStreamingDeviceData = {
       userId: socket.userId!,
     };
 
-    socket.to(data.deviceId).emit(Subjects.DeviceStartStreaming, deviceData);
+    socket.to(data.deviceId).emit(Events.DeviceStartStreaming, deviceData);
 
     log('The user with ID', socket.userId, ' sent a StartStreaming to the device', data.deviceId);
   },
