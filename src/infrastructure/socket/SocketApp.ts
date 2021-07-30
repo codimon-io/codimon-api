@@ -11,6 +11,7 @@ import deviceRemoteControl from './listeners/deviceRemoteControl';
 import deviceStartStreaming from './listeners/deviceStartStreaming';
 import deviceStopStreaming from './listeners/deviceStopStreaming';
 import deviceStreaming from './listeners/deviceStreaming';
+import deviceMoveCamera from './listeners/deviceMoveCamera';
 import Events from './Events';
 
 import pkg from '../../../package.json';
@@ -52,6 +53,7 @@ class SocketApp {
       deviceStartStreaming,
       deviceStopStreaming,
       deviceStreaming,
+      deviceMoveCamera,
     ];
   }
 

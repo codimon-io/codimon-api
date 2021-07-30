@@ -6,6 +6,7 @@ enum Events {
   DeviceStartStreaming = 'device:start-streaming',
   DeviceStopStreaming = 'device:stop-streaming',
   DeviceStreaming = 'device:streaming',
+  DeviceMoveCamera ='device:move-camera',
   UserIdentify = 'user:identify'
 }
 
