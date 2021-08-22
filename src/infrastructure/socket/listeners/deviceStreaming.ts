@@ -1,5 +1,7 @@
 import Events from '../Events';
 import { IDeviceSocket } from '../IClientSocket';
+// eslint-disable-next-line max-len
+// import streamingBus from '../../../contexts/video-streaming/infrastructure/streamingBus/streamingBus';
 
 interface IDeviceStreamingDeviceData {
   userId: string;
@@ -16,6 +18,10 @@ const deviceStreaming = {
     const deviceData: IDeviceStreamingUserData = {
       imageBuffer: data.imageBuffer,
     };
+
+    // console.log('streaming');
+
+    // streamingBus.emit(`${socket.deviceId}`, data.imageBuffer);
 
     socket.to(data.userId).emit(Events.DeviceStreaming, deviceData);
   },
